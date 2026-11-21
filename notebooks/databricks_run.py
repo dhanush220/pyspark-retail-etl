@@ -19,15 +19,23 @@ RAW, OUT = f"{BASE}/raw", f"{BASE}/output"
 
 # COMMAND ----------
 
-# Generate sample data into the repo, then copy it to the Volume.
-subprocess.run([sys.executable, os.path.join(repo_root, "data", "generate_sample_data.py")], check=True)
-dbutils.fs.cp(f"file:{repo_root}/data/raw", RAW, recurse=True)  # noqa: F821  (dbutils exists in Databricks)
+# Generate sample data straight into the Volume (Volumes are mounted at /Volumes/...).
+subprocess.run(
+    [sys.executable, os.path.join(repo_root, "data", "generate_sample_data.py"), "5000", RAW],
+    check=True,
+)
 
 # COMMAND ----------
 
-from etl.pipeline import run
+import importlib
 
-metrics = run(spark, RAW, OUT, fail_on_dq=True)  # noqa: F821  (spark exists in Databricks)
+import etl.pipeline, etl.quality, etl.schema, etl.transforms
+
+# Reload so a `git pull` takes effect without restarting the notebook's Python process.
+for m in (etl.schema, etl.transforms, etl.quality, etl.pipeline):
+    importlib.reload(m)
+
+metrics = etl.pipeline.run(spark, RAW, OUT, fail_on_dq=True)  # noqa: F821  (spark exists in Databricks)
 metrics
 
 # COMMAND ----------

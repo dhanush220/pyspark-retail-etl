@@ -5,8 +5,9 @@ The data is synthetic and deliberately dirty, so the pipeline has real work to d
   * amounts stored as text, some with currency symbols or garbage
   * missing values, duplicate rows, negative quantities
 
-Usage:  python data/generate_sample_data.py [rows_per_source]
-Writes: data/raw/source_a/orders_a.csv and data/raw/source_b/orders_b.csv
+Usage:  python data/generate_sample_data.py [rows_per_source] [output_dir]
+Writes: <output_dir>/source_a/orders_a.csv and <output_dir>/source_b/orders_b.csv
+        (output_dir defaults to data/raw; on Databricks pass a /Volumes/... path)
 """
 import csv
 import random
@@ -17,7 +18,7 @@ from pathlib import Path
 random.seed(42)
 
 ROWS = int(sys.argv[1]) if len(sys.argv) > 1 else 5000
-OUT = Path(__file__).parent / "raw"
+OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).parent / "raw"
 
 COUNTRIES = ["DE", "NL", "IE", "PL", "FR", "IN", "de", " nl "]
 CATEGORIES = ["Electronics", "Grocery", "Fashion", "Home", "Sports", None]

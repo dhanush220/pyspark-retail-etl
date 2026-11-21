@@ -35,9 +35,9 @@ def build(spark: SparkSession, raw_path: str):
 
     typed = T.clean_values(T.apply_types(raw))
     valid, rejected = T.split_valid_rejected(typed)
-    valid = valid.cache()
+    # No .cache(): it is not supported on Databricks serverless compute.
     valid_before = valid.count()
-    silver = T.add_partitions(T.deduplicate(valid)).cache()
+    silver = T.add_partitions(T.deduplicate(valid))
     dedup_removed = valid_before - silver.count()
 
     metrics = quality.collect_metrics(silver, rejected, raw_count, dedup_removed)
@@ -46,9 +46,6 @@ def build(spark: SparkSession, raw_path: str):
 
 
 def run(spark: SparkSession, raw_path: str, out_path: str, fail_on_dq: bool = True) -> dict:
-    # Only overwrite the year/month partitions present in this run.
-    spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
-
     silver, rejected, gold, metrics = build(spark, raw_path)
     results = quality.evaluate(metrics)
     report = quality.format_report(results)
@@ -59,7 +56,12 @@ def run(spark: SparkSession, raw_path: str, out_path: str, fail_on_dq: bool = Tr
         raise RuntimeError("Data quality checks failed, nothing was written.\n" + report)
 
     out = out_path.rstrip("/")
-    silver.write.mode("overwrite").partitionBy("year", "month").parquet(f"{out}/silver/orders")
+    # Dynamic partition overwrite as a writer option: only the year/month partitions in this
+    # run are replaced. (Setting it via spark.conf is blocked on Databricks serverless.)
+    (silver.write.mode("overwrite")
+        .option("partitionOverwriteMode", "dynamic")
+        .partitionBy("year", "month")
+        .parquet(f"{out}/silver/orders"))
     rejected.write.mode("overwrite").parquet(f"{out}/quarantine/orders_rejected")
     gold.write.mode("overwrite").parquet(f"{out}/gold/daily_sales")
     return metrics
