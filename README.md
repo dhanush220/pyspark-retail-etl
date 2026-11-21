@@ -45,8 +45,7 @@ tests/                 pytest (pure-Python tests + Spark tests)
 ### Option 1: Databricks Free Edition (no installation)
 1. Sign up at Databricks Free Edition.
 2. **Workspace → Create → Git folder**, paste this repo's GitHub URL.
-3. Create a Volume (Catalog → `workspace.default` → Create Volume `etl`).
-4. Open `notebooks/databricks_run.py` and **Run all**.
+3. Open `notebooks/databricks_run.py` and **Run all** (it creates the Volume `workspace.default.etl` itself).
 
 ### Option 2: Local
 Requires Python 3.10+ and Java 17.

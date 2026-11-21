@@ -2,8 +2,8 @@
 # MAGIC %md
 # MAGIC # Retail orders ETL on Databricks
 # MAGIC 1. Import this repo with **Workspace → Create → Git folder** (paste your GitHub URL).
-# MAGIC 2. Run `data/generate_sample_data.py` once (cell below), or upload your own CSVs to a Volume.
-# MAGIC 3. Run all cells. Outputs go to a Unity Catalog Volume.
+# MAGIC 2. Click **Run all**. The notebook creates the Volume `workspace.default.etl`,
+# MAGIC    generates sample data, runs the pipeline and shows the results.
 
 # COMMAND ----------
 
@@ -12,7 +12,8 @@ import os, subprocess, sys
 repo_root = os.path.dirname(os.getcwd())          # notebook lives in <repo>/notebooks
 sys.path.insert(0, os.path.join(repo_root, "src"))
 
-# Change these to a Volume you own, e.g. /Volumes/workspace/default/etl
+# Free Edition has a "workspace" catalog with a "default" schema; create a Volume for files.
+spark.sql("CREATE VOLUME IF NOT EXISTS workspace.default.etl")  # noqa: F821
 BASE = "/Volumes/workspace/default/etl"
 RAW, OUT = f"{BASE}/raw", f"{BASE}/output"
 
