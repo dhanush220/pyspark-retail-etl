@@ -30,7 +30,9 @@ def build(spark: SparkSession, raw_path: str):
         T.harmonize(read_source(spark, f"{raw_path.rstrip('/')}/{folder}"), name)
         for name, folder in SOURCES.items()
     ]
-    raw = reduce(DataFrame.unionByName, harmonized)
+    # Call the method on the object (not DataFrame.unionByName) so it also works with
+    # Spark Connect DataFrames on Databricks serverless.
+    raw = reduce(lambda a, b: a.unionByName(b), harmonized)
     raw_count = raw.count()
 
     typed = T.clean_values(T.apply_types(raw))
