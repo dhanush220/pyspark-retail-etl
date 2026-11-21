@@ -43,6 +43,13 @@ tests/                 pytest (pure-Python tests + Spark tests)
 ## Run it
 
 ### Option 1: Databricks Free Edition (no installation)
+Easiest: run it as a one-time job straight from GitHub with the Databricks CLI:
+```bash
+databricks jobs submit --json @run.json
+```
+where `run.json` uses `git_source` (this repo, branch `main`) and a `notebook_task` on `notebooks/databricks_run` with `"source": "GIT"`.
+
+Or in the UI:
 1. Sign up at Databricks Free Edition.
 2. **Workspace → Create → Git folder**, paste this repo's GitHub URL.
 3. Open `notebooks/databricks_run.py` and **Run all** (it creates the Volume `workspace.default.etl` itself).
@@ -59,16 +66,22 @@ pytest -q
 ### Option 3: AWS Glue
 See the steps at the top of `glue/glue_job.py`: zip `src/etl`, upload to S3, create a Glue job with `--extra-py-files`, then crawl `silver/` and `gold/` and query with Athena.
 
-## Example data quality report
+## Data quality report (real run, Databricks serverless)
 ```
-[PASS] not_empty: ...
-[PASS] order_id_unique: ...
-[PASS] order_id_not_null: ...
-[PASS] quantity_positive: ...
-[PASS] reject_ratio_ok: ...
-[PASS] row_reconciliation: raw = valid + rejected + duplicates
+[PASS] not_empty: 8859 valid rows
+[PASS] order_id_unique: 8859 rows / 8859 distinct order_id
+[PASS] order_id_not_null: 0 nulls
+[PASS] quantity_positive: 0 rows <= 0
+[PASS] reject_ratio_ok: 11.4% rejected (limit 25%)
+[PASS] row_reconciliation: raw 10100 = valid 8859 + rejected 1149 + duplicates 92 (accounted 10100)
 ```
-*(Replace this with the real output from your run.)*
+10,100 raw rows from two sources → 8,859 clean orders, 1,149 quarantined with a reason, 92 duplicates removed. Every row is accounted for.
+
+## Serverless / Spark Connect notes
+Running on Databricks serverless (Spark Connect) needed a few changes, which are good to know:
+- `spark.conf.set("spark.sql.sources.partitionOverwriteMode", ...)` is blocked → use the writer option `.option("partitionOverwriteMode", "dynamic")`.
+- `DataFrame.cache()` is not supported → removed.
+- `reduce(DataFrame.unionByName, dfs)` touches the classic JVM DataFrame → use `reduce(lambda a, b: a.unionByName(b), dfs)`.
 
 ## What I would add next
 - Delta Lake MERGE for incremental (upsert) loads instead of full overwrite
